@@ -100,7 +100,7 @@ The system extends the Part 1A pipeline with a sophisticated analysis layer. It 
 
 1. Build the Docker image:
    ```bash
-   docker build -t adobe-hackathon-1b -f dockerfile .
+   docker build -t HackRx-relevant-clause-extraction -f dockerfile .
    ```
 2. Run the following commands for the respective collection folder you want to run
 ```bash
