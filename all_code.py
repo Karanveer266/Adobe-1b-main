@@ -1,6 +1,8 @@
 # in Main
 # python main.py --train-synthetic --samples 15000 --optimize-params --force-retrain
 
+#python main_1b.py --input-dir "input/Collection 1" --output-dir output
+
 #=============================================================================
 # FILE: classifiers.py
 #=============================================================================

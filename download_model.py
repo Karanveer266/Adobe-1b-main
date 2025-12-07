@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Model download script for Adobe Hackathon Part 1B
-Downloads all-mpnet-base-v2 for offline use in Docker container
+Downloads sentence-transformers/all-MiniLM-L6-v2 for offline use in Docker container
 """
 
 import os
@@ -66,7 +66,7 @@ def download_models():
         test_text = "This is a test sentence to verify the model works correctly."
         test_embedding = model.encode(test_text)
         
-        logger.info(f"✅ Successfully downloaded {model_name}")
+        logger.info(f" Successfully downloaded {model_name}")
         logger.info(f"   - Embedding dimension: {len(test_embedding)}")
         logger.info(f"   - Cache location: {models_dir}")
         logger.info(f"   - Estimated size: ~420MB")
@@ -84,12 +84,12 @@ def download_models():
         for var, value in offline_post_download.items():
             os.environ[var] = value
         
-        logger.info("🔒 Offline mode enabled for production use")
+        logger.info(" Offline mode enabled for hackathon use")
         
         return True
         
     except Exception as e:
-        logger.error(f"❌ Failed to download {model_name}: {str(e)}")
+        logger.error(f" Failed to download {model_name}: {str(e)}")
         return False
 
 def verify_download():
@@ -101,7 +101,7 @@ def verify_download():
     model_files = list(models_dir.rglob(model_pattern))
     
     if model_files:
-        logger.info(f"✅ Model files found: {len(model_files)} files")
+        logger.info(f" Model files found: {len(model_files)} files")
         
         # Check for key model files
         required_files = ["config.json", "pytorch_model.bin", "tokenizer.json"]
@@ -114,18 +114,18 @@ def verify_download():
         logger.info(f"   - Key files found: {found_files}")
         
         if len(found_files) >= 2:  # At least config and model files
-            logger.info("✅ Model appears to be downloaded correctly")
+            logger.info(" Model appears to be downloaded correctly")
             return True
         else:
-            logger.warning("⚠️  Some model files may be missing")
+            logger.warning("  Some model files may be missing")
             return False
     else:
-        logger.error("❌ No model files found")
+        logger.error(" No model files found")
         return False
 
 def main():
     """Main function"""
-    logger.info("🚀 Adobe Hackathon Model Download Script")
+    logger.info(" Adobe Hackathon Model Download Script")
     logger.info("Downloading all-mpnet-base-v2 for enhanced semantic similarity")
     
     # Setup environment
@@ -139,14 +139,14 @@ def main():
         verify_success = verify_download()
         
         if verify_success:
-            logger.info("🎉 Model download completed successfully!")
+            logger.info(" Model download completed successfully!")
             logger.info("Your system is ready for offline operation.")
             logger.info("You can now build your Docker container.")
         else:
-            logger.error("❌ Model verification failed")
+            logger.error(" Model verification failed")
             sys.exit(1)
     else:
-        logger.error("❌ Model download failed")
+        logger.error(" Model download failed")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """
-Enhanced embedding engine using all-mpnet-base-v2
-Optimized for CPU-only execution with better semantic understanding
+Embedding engine file
+CPU-only execution with better semantic understanding
 """
 
 import logging
@@ -21,11 +21,10 @@ from config_1b import Config1B
 logger = logging.getLogger(__name__)
 
 class EmbeddingEngine:
-    """CPU-optimized embedding engine with all-mpnet-base-v2 for better semantic similarity"""
     
     def __init__(self):
         self.model = None
-        self.embedding_cache = {}
+        self.embedding_cache = {} # memoization
         self._setup_offline_mode()
         self._load_model()
         
@@ -49,7 +48,7 @@ class EmbeddingEngine:
         """Load the all-mpnet-base-v2 model from local cache"""
         try:
             # Set local model cache directories
-            local_cache = "./models"  # For development/testing
+            local_cache = "./models"  
             docker_cache = "/app/models"  # For Docker container
             
             # Determine which cache directory to use
@@ -72,7 +71,6 @@ class EmbeddingEngine:
             # Try to find the exact model path in cache
             model_path = self._find_cached_model_path(cache_folder, model_name)
             
-            # Load model with CPU optimizations
             start_time = time.time()
             self.model = SentenceTransformer(
                 model_path,
@@ -80,13 +78,12 @@ class EmbeddingEngine:
                 device='cpu'
             )
             
-            # Configure for CPU optimization
             import torch
             self.model = self.model.to('cpu')
             if hasattr(torch, 'set_num_threads'):
-                torch.set_num_threads(4)  # Optimize for CPU
+                torch.set_num_threads(4)  
             
-            # Set inference mode for better performance
+            # Set to evaluation mode
             self.model.eval()
             
             # Verify model works and check dimension
@@ -108,7 +105,7 @@ class EmbeddingEngine:
             raise e
     
     def _find_cached_model_path(self, cache_folder: str, model_name: str) -> str:
-        """Find the actual cached model path for all-mpnet-base-v2"""
+        """Find the actual cached model path sentence transformer"""
         cache_path = Path(cache_folder)
         
         # Look for the specific model directory structure
@@ -119,7 +116,6 @@ class EmbeddingEngine:
                 # Look for snapshots directory
                 snapshots_dir = item / "snapshots"
                 if snapshots_dir.exists():
-                    # Get the first (and usually only) snapshot
                     snapshot_dirs = list(snapshots_dir.iterdir())
                     if snapshot_dirs:
                         model_path = snapshot_dirs[0]
@@ -131,14 +127,14 @@ class EmbeddingEngine:
         return model_name
     
     def encode_text(self, text: str, cache_key: Optional[str] = None) -> np.ndarray:
-        """Encode text to embedding vector with caching - optimized for mpnet"""
+        """Encode text to embedding vector with caching"""
         if cache_key and cache_key in self.embedding_cache:
-            return self.embedding_cache[cache_key]
+            return self.embedding_cache[cache_key] # memoization, used on persona_query
         
         if not text or not text.strip():
             return np.zeros(Config1B.EMBEDDING_DIMENSION)
         
-        # Truncate text if too long
+        # Truncate text if too long for the model
         text = text[:Config1B.MAX_TEXT_LENGTH_FOR_EMBEDDING]
         
         try:
@@ -162,7 +158,7 @@ class EmbeddingEngine:
             return np.zeros(Config1B.EMBEDDING_DIMENSION)
     
     def encode_batch(self, texts: List[str]) -> np.ndarray:
-        """Encode multiple texts efficiently - optimized for all-mpnet-base-v2"""
+        """Encode multiple texts efficiently"""
         if not texts:
             return np.array([])
         
@@ -170,7 +166,7 @@ class EmbeddingEngine:
         
         # Smaller batches for the larger model to stay within time constraints
         max_batch_size = self.max_batch_size
-        max_text_length = 400  # Slightly reduced for speed
+        max_text_length = 400  
         
         # Process in small batches
         all_embeddings = []
@@ -225,7 +221,7 @@ class EmbeddingEngine:
     def calculate_similarity(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """Calculate cosine similarity between two embeddings - optimized for normalized embeddings"""
         try:
-            # If embeddings are already normalized (which they should be), dot product = cosine similarity
+            # embeddings are already normalized , dot product = cosine similarity
             if hasattr(self.model, 'encode') and getattr(self.model, '_last_normalize', True):
                 similarity = np.dot(embedding1, embedding2)
             else:
@@ -246,7 +242,7 @@ class EmbeddingEngine:
     
     def find_most_similar(self, query_embedding: np.ndarray, 
                          candidate_embeddings: List[np.ndarray]) -> List[Tuple[int, float]]:
-        """Find most similar embeddings from candidates - vectorized for speed"""
+        """Find most similar embeddings from candidates"""
         if not candidate_embeddings:
             return []
         

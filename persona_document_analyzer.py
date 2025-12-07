@@ -27,10 +27,8 @@ class PersonaDocumentAnalyzer:
     """Main analyzer that orchestrates persona-driven document intelligence"""
     
     def __init__(self):
-        # Initialize Part 1A system for heading detection
         self.heading_detector = PDFHeadingDetectionSystem()
         
-        # Initialize Part 1B components
         self.embedding_engine = EmbeddingEngine()
         self.persona_processor = PersonaProcessor()
         self.section_ranker = SectionRanker(self.embedding_engine)

@@ -11,7 +11,7 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import re  # Ensure re is imported
+import re  
 from typing import List, Tuple, Dict, Any, Optional
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
@@ -42,14 +42,13 @@ class HeadingClassificationSystem:
         self.feature_names = []
         self.training_stats = {}
 
-        # ADDED: Stricter thresholds
-        self.BINARY_THRESHOLD = 0.50 # Increased from default
-        self.HIERARCHICAL_THRESHOLD = 0.50  # Increased from default
+        self.BINARY_THRESHOLD = 0.50 
+        self.HIERARCHICAL_THRESHOLD = 0.50  
         self.MIN_HEADING_LENGTH = 3
         self.MAX_HEADING_LENGTH = 200
 
     def train_with_synthetic_data(self, samples_per_class: int = None,
-                                  optimize_hyperparameters: bool = True) -> None:
+                                  optimize_hyperparameters: bool = True) -> None: 
         """Train the classification system using synthetic data"""
         if samples_per_class is None:
             samples_per_class = Config.DEFAULT_SAMPLES_PER_CLASS
@@ -57,10 +56,10 @@ class HeadingClassificationSystem:
         logger.info(f"Training with synthetic data: {samples_per_class} samples per class")
 
         # Load or generate synthetic data
-        X, y = self._load_or_generate_data(samples_per_class)
+        X, y = self._load_or_generate_data(samples_per_class) 
 
         # Feature preprocessing
-        X_processed, feature_names = self._preprocess_features(X, y)
+        X_processed, feature_names = self._preprocess_features(X, y) # defensive programming against empty data
 
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(
@@ -107,7 +106,7 @@ class HeadingClassificationSystem:
 
         # Generate new data
         logger.info("Generating new synthetic training data...")
-        X, y = generate_and_save_training_data(samples_per_class)
+        X, y = generate_and_save_training_data(samples_per_class) # imported from synthetic data generator
         return X, y
 
     def _preprocess_features(self, X: pd.DataFrame, y: List[str]) -> Tuple[np.ndarray, List[str]]:
@@ -127,12 +126,12 @@ class HeadingClassificationSystem:
         self.feature_scaler = StandardScaler()
         X_scaled = self.feature_scaler.fit_transform(X_array)
 
-        # Feature selection (optional)
+        # Feature selection (optional) by anova f test
         if Config.ENABLE_FEATURE_SELECTION and X_scaled.shape[1] > Config.MAX_FEATURES_FOR_TRAINING:
             logger.info(f"Selecting best {Config.MAX_FEATURES_FOR_TRAINING} features...")
 
             self.feature_selector = SelectKBest(
-                score_func=f_classif,
+                score_func=f_classif, # calculates f statistic scores(v between/within groups) and internally saves a list of best k
                 k=min(Config.MAX_FEATURES_FOR_TRAINING, X_scaled.shape[1])
             )
 
@@ -157,14 +156,13 @@ class HeadingClassificationSystem:
         y_binary_train = ['heading' if label in Config.HEADING_TYPES else 'non-heading' for label in y_train]
         y_binary_test = ['heading' if label in Config.HEADING_TYPES else 'non-heading' for label in y_test]
 
-        # IMPROVED: Better hyperparameters for more conservative classification
         if optimize_hyperparameters:
             param_grid = {
-                'n_estimators': [150, 200, 250],  # More trees
-                'max_depth': [6, 8, 10],  # Controlled depth
-                'min_samples_split': [5, 10, 15],  # More conservative splitting
-                'min_samples_leaf': [2, 4, 6],  # Larger leaf nodes
-                'class_weight': ['balanced', 'balanced_subsample']  # Handle class imbalance
+                'n_estimators': [150, 200, 250],  
+                'max_depth': [6, 8, 10],  
+                'min_samples_split': [5, 10, 15],  
+                'min_samples_leaf': [2, 4, 6], 
+                'class_weight': ['balanced', 'balanced_subsample']
             }
 
             base_classifier = RandomForestClassifier(random_state=42, n_jobs=-1)
@@ -200,7 +198,7 @@ class HeadingClassificationSystem:
         # Cross-validation score
         cv_scores = cross_val_score(
             self.binary_classifier, X_train, y_binary_train,
-            cv=Config.CROSS_VALIDATION_FOLDS, scoring='f1_weighted'
+            cv=Config.CROSS_VALIDATION_FOLDS, scoring='f1_weighted' # uses f1 score
         )
         logger.info(f"Binary classifier CV F1: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 
@@ -237,7 +235,6 @@ class HeadingClassificationSystem:
 
         logger.info(f"Hierarchical training set: {X_heading_train.shape}")
 
-        # IMPROVED: Better hyperparameters for hierarchical classification
         if optimize_hyperparameters:
             param_grid = {
                 'n_estimators': [100, 150, 200],
@@ -279,7 +276,7 @@ class HeadingClassificationSystem:
             # Cross-validation for hierarchical classifier
             cv_scores = cross_val_score(
                 self.hierarchical_classifier, X_heading_train, y_heading_train,
-                cv=min(Config.CROSS_VALIDATION_FOLDS, len(set(y_heading_train))),
+                cv=min(Config.CROSS_VALIDATION_FOLDS, len(set(y_heading_train))), # this prevents crashing if members of the smallest class are less then cv folds.
                 scoring='f1_weighted'
             )
             logger.info(f"Hierarchical classifier CV F1: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
@@ -303,7 +300,7 @@ class HeadingClassificationSystem:
         mock_elements = [{'text': f'test_{i}'} for i in range(len(X_test))]
 
         # Get predictions from complete system
-        predictions = self.predict(X_test, mock_elements)
+        predictions = self.predict(X_test, mock_elements) # predict only returns headings and ignores non headings
 
         # Initialize with correct default
         predicted_labels = ['non-heading'] * len(y_test)
@@ -341,7 +338,7 @@ class HeadingClassificationSystem:
         }
 
     def predict(self, features: np.ndarray, elements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """IMPROVED: Predict heading types using multi-stage classification with stricter filtering"""
+        """Predict heading types using multi-stage classification with strict filtering"""
         if not self.is_trained:
             if not self.load_models():
                 logger.warning("No trained models available, using fallback classification")
@@ -371,7 +368,7 @@ class HeadingClassificationSystem:
         for i, (element, binary_pred) in enumerate(zip(elements, binary_predictions)):
             text = element.get('text', '').strip()
 
-            # ADDED: Pre-filter based on text characteristics
+            # Pre-filter based on text characteristics
             if not self._passes_text_quality_check(element):
                 continue
 
@@ -379,19 +376,19 @@ class HeadingClassificationSystem:
                 # Get binary confidence
                 binary_confidence = binary_probabilities[i][heading_class_idx]
 
-                # STRICTER: Higher threshold for binary classification
+                #Higher threshold for binary classification
                 if binary_confidence >= self.BINARY_THRESHOLD:
                     # Apply hierarchical classifier
                     if self.hierarchical_classifier is not None:
                         hierarchical_pred = self.hierarchical_classifier.predict([features_processed[i]])[0]
-                        hierarchical_proba = self.hierarchical_classifier.predict_proba([features_processed[i]])[0]
+                        hierarchical_proba = self.hierarchical_classifier.predict_proba([features_processed[i]])[0] # outputs 2d array of probabilities for each class, we select the 0th list
                         hierarchical_confidence = np.max(hierarchical_proba)
 
-                        # STRICTER: Higher threshold for hierarchical classification
+                        # Higher threshold for hierarchical classification
                         if hierarchical_confidence >= self.HIERARCHICAL_THRESHOLD:
                             # Ensemble confidence
                             final_confidence = (
-                                0.6 * binary_confidence +  # MODIFIED: Weights
+                                0.6 * binary_confidence +  # Weights
                                 0.4 * hierarchical_confidence
                             )
 
@@ -409,7 +406,7 @@ class HeadingClassificationSystem:
                             predictions.append({
                                 'element_index': i,
                                 'type': fallback_type,
-                                'confidence': binary_confidence * 0.6,  # PENALTY: Reduced confidence
+                                'confidence': binary_confidence * 0.6,  # PENALTY for filter_low_confidence_predictions
                                 'binary_confidence': binary_confidence,
                                 'hierarchical_confidence': hierarchical_confidence,
                                 'method': 'binary_ml_hierarchical_fallback'
@@ -426,7 +423,6 @@ class HeadingClassificationSystem:
                             'method': 'binary_ml_only'
                         })
 
-        # STRICTER: Filter low confidence predictions
         predictions = filter_low_confidence_predictions(
             predictions,
             min(self.HIERARCHICAL_THRESHOLD, 0.65)  # Dynamic threshold
@@ -436,7 +432,7 @@ class HeadingClassificationSystem:
         return predictions
 
     def _passes_text_quality_check(self, element: Dict[str, Any]) -> bool:
-        """ADDED: Pre-filter elements based on text quality"""
+        """Pre-filter elements based on text quality"""
         text = element.get('text', '').strip()
         font_size = element.get('font_size', 12.0)
         is_bold = element.get('is_bold', False)
@@ -489,8 +485,7 @@ class HeadingClassificationSystem:
             return None
 
     def _determine_hierarchy_fallback(self, element: Dict[str, Any]) -> str:
-        # FIXED: Better hierarchy determination with correct logic
-        """FIXED: Better hierarchy determination with correct logic"""
+        """hierarchy determination"""
         font_size = element.get('font_size', 12.0)
         position = element.get('position', 0)
         page = element.get('page', 1)
@@ -498,7 +493,7 @@ class HeadingClassificationSystem:
         is_bold = element.get('is_bold', False)
         word_count = len(text.split()) if text else 0
 
-        # Title detection (most restrictive)
+        # Title detection 
         is_likely_title = (
             page == 1 and position < 3 and
             font_size > 15 and word_count <= 8 and
@@ -508,9 +503,9 @@ class HeadingClassificationSystem:
         if is_likely_title:
             return 'title'
 
-        # H1 detection - Major sections
+        # H1 detection 
         is_h1 = (
-            # Numbered major sections (1., 2., 3., 4.)
+            # Numbered major sections (1., 2., 3., 4.) from sample pdfs
             re.match(r'^\d+\.\s', text.strip()) or
             # Key document sections
             any(section in text.lower() for section in [
@@ -527,7 +522,7 @@ class HeadingClassificationSystem:
         # H2 detection - Subsections
         is_h2 = (
             # Numbered subsections (2.1, 2.2, 3.1, etc.)
-            re.match(r'^\d+\.\d+\s', text.strip()) or
+            re.match(r'^\d+\.\d+\s', text.strip()) or 
             # Bold, medium font, reasonable length
             (font_size >= 14 and is_bold and word_count <= 12) or
             # Early position with good formatting
@@ -541,7 +536,7 @@ class HeadingClassificationSystem:
         return 'h3'
 
     def _fallback_classification(self, elements: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """IMPROVED: Complete fallback classification using conservative heuristics"""
+        """Complete fallback classification using conservative heuristics"""
         logger.info("Using complete fallback classification")
         predictions = []
 
@@ -553,7 +548,7 @@ class HeadingClassificationSystem:
             page = element.get('page', 1)
             word_count = len(text.split()) if text else 0
 
-            # STRICTER: More conservative heading detection
+            # heading detection
             is_heading = (
                 # Font-based detection
                 (font_size >= 14 and is_bold and word_count <= 10) or
@@ -567,7 +562,7 @@ class HeadingClassificationSystem:
                 (re.match(r'^\d+\.?\s', text.strip()) and font_size >= 12 and word_count <= 15)
             )
 
-            # ADDED: Additional quality checks
+            # Additional quality checks
             if is_heading and self._passes_text_quality_check(element):
                 heading_type = self._determine_hierarchy_fallback(element)
                 predictions.append({
@@ -643,7 +638,7 @@ class HeadingClassificationSystem:
             logger.error(f"Error saving models: {str(e)}")
 
     def detect_title(self, elements: List[Dict[str, Any]]) -> str:
-        # ADDED: Detect document title from early elements
+        # Detect document title from early elements
         """Detect document title from first page, large font elements"""
         title_candidates = []
 
