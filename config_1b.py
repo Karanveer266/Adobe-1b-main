@@ -8,6 +8,7 @@ from pathlib import Path
 class Config1B:
     EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"  
     EMBEDDING_DIMENSION = 384  
+
     MAX_MODEL_SIZE_MB = 1024  # 1GB limit
     
     # Text processing limits
