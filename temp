@@ -1,0 +1,151 @@
+import sys
+
+# The modulus for all calculations, as specified in the problem.
+MOD = 998244353
+
+def predict_contract_distribution(
+    num_contracts: int,
+    num_trucks: int,
+    contract_identifiers: list[int],
+    initial_assignments: list[int]
+) -> list[int]:
+    """
+    Calculates the expected number of contracts each truck will hold after all
+    spot contracts are auctioned.
+
+    Args:
+        num_contracts: The total number of contracts (n).
+        num_trucks: The total number of trucks (m).
+        contract_identifiers: A sorted list of n unique integer identifiers for the contracts.
+        initial_assignments: A list of n integers where the i-th element indicates
+                             which truck (1 to m) is assigned the i-th contract,
+                             or 0 if it's an unassigned spot contract.
+
+    Returns:
+        A list of m integers, where the i-th integer is the expected number of
+        contracts for truck (i+1), calculated modulo 998244353.
+    """
+    n_orig = num_contracts
+    m = num_trucks
+    a_orig = contract_identifiers
+    b_orig = initial_assignments
+
+    # Pre-compute modular inverses for numbers from 1 to n.
+    # inv[i] will store the modular multiplicative inverse of i.
+    inv = [0] * (n_orig + 1)
+    for i in range(1, n_orig + 1):
+        inv[i] = pow(i, MOD - 2, MOD)
+
+    # --- Filtering Step ---
+    # A contract a[i] is only relevant if there's some *assigned* contract a[j]
+    # (where j >= i) that is a multiple of a[i]. This is because a spot contract
+    # can only be won if a truck bids a multiple of it. Every assigned card makes
+    # itself relevant in this check.
+    a_filtered = []
+    b_filtered = []
+    for i in range(n_orig):
+        is_relevant = False
+        for j in range(i, n_orig):
+            if b_orig[j] != 0 and a_orig[j] % a_orig[i] == 0:
+                is_relevant = True
+                break
+        if is_relevant:
+            a_filtered.append(a_orig[i])
+            b_filtered.append(b_orig[i])
+    
+    a = a_filtered
+    b = b_filtered
+    n = len(a)
+
+    if n == 0:
+        return [0] * m
+
+    # --- Pre-computation of `w` array ---
+    # w[i][j] stores information about the relationship between contract a[j] (as a potential
+    # spot contract) and a[i] (as a potential winning bid).
+    # if w[i][j] >= 0, it's the count of unassigned contracts a[k] (with j <= k < i) that are
+    # multiples of a[j]. This group of contracts would all be won by the holder of a[i] if
+    # a[i] is the smallest assigned contract that's a multiple of a[j].
+    # if w[i][j] == -1, it means there's an assigned card a[k] between a[j] and a[i] that
+    # is a multiple of a[j]. This 'blocks' a[i] from winning a[j], because a[k] is a better bid.
+    w = [[0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i):
+            if a[i] % a[j] == 0:
+                count = 0
+                is_blocked = False
+                for k in range(j, i):
+                    if a[k] % a[j] == 0:
+                        count += 1
+                        if b[k] != 0:
+                            is_blocked = True
+                            break
+                if is_blocked:
+                    w[i][j] = -1
+                else:
+                    w[i][j] = count
+
+    # --- Main Dynamic Programming ---
+    # f[j][v] represents a value related to the state where contract a[j] is a key
+    # acquired card, along with v other spot contracts.
+    f = [[0] * (n + 1) for _ in range(n)]
+    ans = [0] * (m + 1)  # 1-indexed for trucks
+
+    for j in range(n):
+        # Base case: A contract 'j' exists on its own. The '1' represents the contract itself.
+        f[j][0] = 1
+        
+        # Iterate through all previous contracts 'o' to build up the DP state for 'j'.
+        for o in range(j):
+            # A transition is possible if a[j] is a multiple of a[o] and is not blocked.
+            if a[j] % a[o] == 0 and w[j][o] != -1:
+                current_w = w[j][o]
+                # 'v' is the number of spot contracts won in the subproblem ending at 'o'.
+                for v in range(o + 1):
+                    if f[o][v] > 0:
+                        # We transition from state (o, v) to a new state for j.
+                        # The number of newly won contracts is current_w.
+                        target_v = v + current_w
+                        # The update rule combines probabilities/expectations.
+                        term = (f[o][v] * inv[target_v]) % MOD
+                        f[j][target_v] = (f[j][target_v] + term) % MOD
+        
+        # If contract a[j] was initially assigned, add its total expected contribution
+        # to the corresponding truck's answer.
+        if b[j] != 0:
+            truck_id = b[j]
+            # The sum over all f[j][v] gives the total expected value associated with
+            # the scenarios where a[j] is a key card.
+            for v in range(j + 1):
+                ans[truck_id] = (ans[truck_id] + f[j][v]) % MOD
+
+    # The result is stored in ans[1] to ans[m]. Return this slice.
+    return ans[1:]
+
+
+def main():
+    """
+    Main function to read input from stdin, call the solver, and print the output.
+    """
+    try:
+        # Read n and m
+        n, m = map(int, sys.stdin.readline().strip().split())
+
+        # Read contract identifiers
+        a = list(map(int, sys.stdin.readline().strip().split()))
+
+        # Read initial assignments
+        b = list(map(int, sys.stdin.readline().strip().split()))
+
+        # Get the result from the core logic function
+        result = predict_contract_distribution(n, m, a, b)
+
+        # Print the final result
+        print(*result)
+
+    except (IOError, ValueError):
+        # Gracefully handle input errors
+        pass
+
+if __name__ == "__main__":
+    main()
